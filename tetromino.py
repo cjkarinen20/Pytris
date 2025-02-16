@@ -10,6 +10,7 @@ class Block(pg.sprite.Sprite):
         self.pos = vec(pos) + INIT_POS_OFFSET
         self.alive = True
         
+
         super().__init__(tetromino.pytris.sprite_group)
         self.image = pg.Surface((TILE_SIZE, TILE_SIZE))
         pg.draw.rect(self.image, 'red', (1, 1, TILE_SIZE - 2, TILE_SIZE - 2), border_radius = 8)
@@ -17,6 +18,10 @@ class Block(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.topleft = self.pos * TILE_SIZE
     
+    def is_alive(self):
+        if not self.alive:
+            self.kill()
+            
     def rotate(self, pivot_pos):
         translated = self.pos - pivot_pos
         rotated = translated.rotate(90)
@@ -26,12 +31,12 @@ class Block(pg.sprite.Sprite):
         self.rect.topleft = self.pos * TILE_SIZE
     
     def update(self):
+        self.is_alive()
         self.set_rect_pos()
         
     def has_collision(self, pos):
         x, y = int(pos.x), int(pos.y)
-        if 0 <= x < FIELD_W and 0 <= y < FIELD_H and (
-            y < 0 or not self.tetromino.pytris.field_array[y][x]):
+        if 0 <= x < FIELD_W and 0 <= y < FIELD_H and (y < 0 or not self.tetromino.pytris.field_array[y][x]):
             return False
         return True
 
@@ -41,7 +46,7 @@ class Tetromino:
         self.shape = random.choice(list(TETROMINOES.keys()))
         self.blocks = [Block(self, pos) for pos in TETROMINOES[self.shape]]
         self.landing = False
-        
+    
     def rotate(self):
         pivot_pos = self.blocks[0].pos
         new_block_positions = [block.rotate(pivot_pos) for block in self.blocks]
