@@ -8,19 +8,38 @@ class Block(pg.sprite.Sprite):
     def __init__ (self, tetromino, pos):
         self.tetromino = tetromino
         self.pos = vec(pos) + INIT_POS_OFFSET
+        self.next_pos = vec(pos) + NEXT_POS_OFFSET
         self.alive = True
         
 
         super().__init__(tetromino.pytris.sprite_group)
-        self.image = pg.Surface((TILE_SIZE, TILE_SIZE))
-        pg.draw.rect(self.image, 'red', (1, 1, TILE_SIZE - 2, TILE_SIZE - 2), border_radius = 8)
-        
+        self.image = tetromino.image
         self.rect = self.image.get_rect()
-        self.rect.topleft = self.pos * TILE_SIZE
+        
+        self.sfx_image = self.image.copy()
+        self.sfx_image.set_alpha(110)
+        self.sfx_speed = random.uniform(0.02, 0.6)
+        self.sfx_cycles = random.randrange(6, 8)
+        self.cycle_counter = 0
+        
+    def sfx_end_time(self):
+        if self.tetromino.pytris.app.anim_trigger:
+            self.cycle_counter += 1
+            if self.cycle_counter > self.sfx_cycles:
+                self.cycle_counter = 0
+                return True
     
+    def sfx_run(self):
+        self.image = self.sfx_image 
+        self.pos.y -= self.sfx_speed
+        self.image = pg.transform.rotate(self.image, pg.time.get_ticks() * self.sfx_speed) 
+        
     def is_alive(self):
         if not self.alive:
-            self.kill()
+            if not self.sfx_end_time():
+                self.sfx_run()
+            else:
+                self.kill()
             
     def rotate(self, pivot_pos):
         translated = self.pos - pivot_pos
@@ -28,7 +47,8 @@ class Block(pg.sprite.Sprite):
         return rotated + pivot_pos
     
     def set_rect_pos(self):
-        self.rect.topleft = self.pos * TILE_SIZE
+        pos = [self.next_pos, self.pos][self.tetromino.current]
+        self.rect.topleft = pos * TILE_SIZE
     
     def update(self):
         self.is_alive()
@@ -41,11 +61,13 @@ class Block(pg.sprite.Sprite):
         return True
 
 class Tetromino:
-    def __init__(self, pytris):
+    def __init__(self, pytris, current=True):
         self.pytris = pytris
         self.shape = random.choice(list(TETROMINOES.keys()))
+        self.image = random.choice(self.pytris.app.images)
         self.blocks = [Block(self, pos) for pos in TETROMINOES[self.shape]]
         self.landing = False
+        self.current = current
     
     def rotate(self):
         pivot_pos = self.blocks[0].pos
